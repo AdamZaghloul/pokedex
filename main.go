@@ -30,7 +30,7 @@ func main() {
 		} else {
 			err = callback()
 			if err != nil {
-				break
+				fmt.Printf("Error: %v", err)
 			}
 		}
 
@@ -59,14 +59,14 @@ func parseCommand(command string) (func() error, error) {
 	if ok {
 		return cmd.callback, nil
 	}
-	return nil, errors.New("No such command")
+	return nil, errors.New("no such command")
 }
 
 func commandHelp() error {
 	fmt.Println("\nWelcome to the Pokedex!\nUsage:\n")
 
 	for _, command := range commands {
-		fmt.Println(fmt.Sprintf("%s: %s", command.name, command.description))
+		fmt.Printf("%s: %s\n", command.name, command.description)
 	}
 
 	fmt.Println("")
@@ -75,5 +75,6 @@ func commandHelp() error {
 }
 
 func commandExit() error {
-	return errors.New("Break from loop")
+	os.Exit(0)
+	return nil
 }
