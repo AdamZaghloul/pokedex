@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"pokedex/internal/pokecache"
+	"time"
 )
 
 type cliCommand struct {
@@ -15,6 +17,7 @@ type cliCommand struct {
 type Config struct {
 	Next     string
 	Previous string
+	Cache    pokecache.Cache
 }
 
 type mapResult struct {
@@ -35,6 +38,7 @@ func main() {
 	config := Config{
 		Next:     "https://pokeapi.co/api/v2/location-area/",
 		Previous: "",
+		Cache:    *pokecache.NewCache(60 * time.Second),
 	}
 
 	commands = getCommands()

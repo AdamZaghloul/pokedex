@@ -42,7 +42,8 @@ func parseCommand(command string) (func(*Config) error, error) {
 }
 
 func commandHelp(config *Config) error {
-	fmt.Println("\nWelcome to the Pokedex!\nUsage:\n")
+	fmt.Println("\nWelcome to the Pokedex!\nUsage:")
+	fmt.Println()
 
 	for _, command := range commands {
 		fmt.Printf("%s: %s\n", command.name, command.description)
@@ -59,9 +60,19 @@ func commandExit(config *Config) error {
 }
 
 func commandMap(config *Config) error {
-	body, err := httpGet(config.Next)
-	if err != nil {
-		return err
+	var err error
+
+	body, ok := config.Cache.Get(config.Next)
+	if !ok {
+		body, err = httpGet(config.Next)
+		if err != nil {
+			return err
+		}
+
+		err = config.Cache.Add(config.Next, body)
+		if err != nil {
+			return err
+		}
 	}
 
 	result := mapResult{}
@@ -86,12 +97,22 @@ func commandMap(config *Config) error {
 }
 
 func commandMapb(config *Config) error {
+	var err error
+
 	if config.Previous == "" {
 		return errors.New(`already at the beginning of the map`)
 	}
-	body, err := httpGet(config.Previous)
-	if err != nil {
-		return err
+	body, ok := config.Cache.Get(config.Previous)
+	if !ok {
+		body, err = httpGet(config.Previous)
+		if err != nil {
+			return err
+		}
+
+		err = config.Cache.Add(config.Previous, body)
+		if err != nil {
+			return err
+		}
 	}
 
 	result := mapResult{}
