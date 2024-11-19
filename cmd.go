@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 )
@@ -32,8 +33,16 @@ func getCommands() map[string]cliCommand {
 		},
 		"explore": {
 			name:        "explore AREA-NAME",
-			description: "Displays the names of all pokemon in te given AREA-NAME argument",
+			description: "Displays the names of all pokemon in the given AREA-NAME argument.",
 			callback:    commandExplore,
+		}, "catch": {
+			name:        "catch POKEMON-NAME",
+			description: "Attempt to catch the pokemon in the POKEMON-NAME argument.",
+			callback:    commandCatch,
+		}, "inspect": {
+			name:        "inspect POKEMON-NAME",
+			description: "View information of the pokemon in the POKEMON-NAME argument.",
+			callback:    commandInspect,
 		},
 	}
 }
@@ -188,6 +197,92 @@ func commandExplore(config *Config, arg string) error {
 
 	for _, encounter := range result.PokemonEncounters {
 		fmt.Println(" - " + encounter.Pokemon.Name)
+	}
+
+	fmt.Println()
+
+	return nil
+}
+
+func commandCatch(config *Config, arg string) error {
+	var err error
+
+	if arg == "" {
+		return errors.New("no pokemon specified.")
+	}
+
+	body, ok := config.Cache.Get(config.Pokemon + arg)
+
+	if !ok {
+		body, err = httpGet(config.Pokemon + arg)
+		if err != nil {
+			if strings.Contains(err.Error(), "404") {
+				return errors.New("invalid pokemon name.")
+			} else {
+				return err
+			}
+		}
+
+		err = config.Cache.Add(config.Pokemon+arg, body)
+		if err != nil {
+			return err
+		}
+	}
+
+	result := Pokemon{}
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return err
+	}
+
+	//Get change based on base experience, basically 75/basexp chance
+	fmt.Println()
+	fmt.Printf("Throwinga Pokeball at %s\n", result.Name)
+
+	denom := result.BaseExperience / 75
+
+	if denom < 1 {
+		denom = 1
+	}
+
+	rand := rand.Intn(denom + 1)
+
+	if rand == 1 {
+		config.Pokedex[result.Name] = result
+		fmt.Printf("%s was caught!\n", result.Name)
+	} else {
+		fmt.Printf("%s escaped!\n", result.Name)
+	}
+
+	fmt.Println()
+
+	return nil
+}
+
+func commandInspect(config *Config, arg string) error {
+	pokemon, ok := config.Pokedex[arg]
+
+	if !ok {
+		fmt.Println("you have not caught that pokemon.")
+		fmt.Println()
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Printf("Name: %s\n", pokemon.Name)
+	fmt.Printf("Height: %d\n", pokemon.Height)
+	fmt.Printf("Weight: %d\n", pokemon.Weight)
+	fmt.Println("Stats:")
+
+	for _, stat := range pokemon.Stats {
+		fmt.Printf("   -%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	}
+
+	fmt.Println("Types:")
+
+	for _, types := range pokemon.Types {
+		fmt.Printf("   - %s\n", types.Type.Name)
 	}
 
 	fmt.Println()
